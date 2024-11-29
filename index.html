@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lead Scraper</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-900 text-gray-200">
+  <!-- Search Section -->
+  <div class="container mx-auto py-20">
+    <div class="max-w-2xl mx-auto bg-gray-800 p-8 rounded-lg shadow-lg">
+      <h1 class="text-3xl font-bold text-center mb-6">Lead Generator</h1>
+      <form id="leadForm" action="javascript:void(0);">
+        <label for="query" class="block text-lg font-semibold mb-2">Search Bing Maps Leads</label>
+        <input
+          type="text"
+          id="query"
+          placeholder="Enter a location or business type"
+          class="w-full p-4 text-gray-800 rounded-lg border-2 border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <button
+          type="submit"
+          class="mt-4 w-full bg-indigo-700 text-white py-3 rounded-lg font-semibold hover:bg-indigo-800 transition duration-300"
+        >
+          Search
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Result Section -->
+  <div id="resultSection" class="container mx-auto py-10">
+    <div class="max-w-4xl mx-auto">
+      <h2
+        id="searchResultsHeading"
+        class="text-2xl font-bold text-center mb-6"
+        style="display: none;"
+      >
+        Search Results (<span id="resultCount">0</span>)
+      </h2>
+      <div
+        id="downloadButtons"
+        class="flex justify-center space-x-4 mb-6"
+        style="display: none;"
+      >
+        <button
+          id="downloadCSV"
+          class="bg-green-700 text-white py-2 px-6 rounded-lg font-semibold hover:bg-green-800 transition duration-300"
+        >
+          Download CSV
+        </button>
+        <button
+          id="downloadXLSX"
+          class="bg-blue-700 text-white py-2 px-6 rounded-lg font-semibold hover:bg-blue-800 transition duration-300"
+        >
+          Download XLSX
+        </button>
+      </div>
+      <ul id="resultsList" class="space-y-6">
+        <!-- Results will be dynamically added here -->
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('leadForm').addEventListener('submit', function (event) {
+      event.preventDefault();
+      const query = document.getElementById('query').value;
+      
+      fetch('/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `query=${encodeURIComponent(query)}`
+      })
+      .then(response => response.json())
+      .then(data => {
+        const resultsList = document.getElementById('resultsList');
+        resultsList.innerHTML = '';
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+        const resultCount = data.length;  // Count the number of results
+        document.getElementById('resultCount').textContent = resultCount;  // Update the result count
+        document.getElementById('searchResultsHeading').style.display = 'block';  // Show the results heading
+
+        data.forEach(business => {
+          const businessItem = document.createElement('li');
+          businessItem.classList.add('bg-gray-800', 'p-6', 'rounded-lg', 'shadow-lg', 'hover:bg-gray-700', 'transition', 'duration-300', 'transform', 'hover:scale-105', 'flex', 'items-center', 'space-x-4');
+          const phone = business.entity.phone || "Not available";  // Handle undefined phone field
+          const website = business.entity.website ? `<a href="${business.entity.website}" target="_blank" class="text-indigo-400 hover:underline">Visit Here</a>` : "Not available";  // Handle undefined website
+  
+          businessItem.innerHTML = `
+            <div class="w-24 h-24 flex-shrink-0">
+              <img src="${business.entity.imageUrl}" alt="${business.entity.title}" class="w-full h-full rounded-full border-4 border-indigo-500">
+            </div>
+            <div class="flex-1">
+              <strong class="text-indigo-200">Business Name:</strong> ${business.entity.title}<br>
+              <strong class="text-indigo-200">Address:</strong> ${business.entity.address}<br>
+              <strong class="text-indigo-200">Latitude:</strong> ${business.routablePoint.latitude}<br>
+              <strong class="text-indigo-200">Longitude:</strong> ${business.routablePoint.longitude}<br>
+              <strong class="text-indigo-200">Phone:</strong> ${phone}<br>
+              <strong class="text-indigo-200">Website:</strong> ${website}<br>
+              <strong class="text-indigo-200">Category:</strong> ${business.entity.primaryCategoryName}<br>
+              <strong class="text-indigo-200">Entry Name:</strong> ${business.entity.entryName}<br>
+            </div>
+          `;
+          resultsList.appendChild(businessItem);
+        });
+
+        document.getElementById('searchResultsHeading').style.display = 'block';
+        document.getElementById('downloadButtons').style.display = 'flex';
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while searching.');
+      });
+    });
+  </script>
+</body>
+</html>
